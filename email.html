@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suspicious Email Detector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 1.05em;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 150px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .results {
+            margin-top: 30px;
+            padding: 25px;
+            border-radius: 15px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+            animation: slideIn 0.4s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .results.high-risk {
+            background: #fee;
+            border: 3px solid #f44336;
+        }
+
+        .results.moderate-risk {
+            background: #fff3e0;
+            border: 3px solid #ff9800;
+        }
+
+        .results.low-risk {
+            background: #fff9c4;
+            border: 3px solid #ffc107;
+        }
+
+        .results.safe {
+            background: #e8f5e9;
+            border: 3px solid #4caf50;
+        }
+
+        .threat-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+
+        .high-risk .threat-badge {
+            background: #f44336;
+            color: white;
+        }
+
+        .moderate-risk .threat-badge {
+            background: #ff9800;
+            color: white;
+        }
+
+        .low-risk .threat-badge {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .safe .threat-badge {
+            background: #4caf50;
+            color: white;
+        }
+
+        .score {
+            font-size: 3em;
+            font-weight: 700;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .high-risk .score {
+            color: #f44336;
+        }
+
+        .moderate-risk .score {
+            color: #ff9800;
+        }
+
+        .low-risk .score {
+            color: #ffc107;
+        }
+
+        .safe .score {
+            color: #4caf50;
+        }
+
+        .reasons {
+            margin-top: 20px;
+        }
+
+        .reasons h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .reason-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .recommendation {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .icon {
+            font-size: 1.5em;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Email Security Scanner</h1>
+            <p>Detect phishing attempts and suspicious emails</p>
+        </div>
+
+        <div class="content">
+            <form id="emailForm">
+                <div class="form-group">
+                    <label for="senderEmail">Sender Email Address *</label>
+                    <input type="email" id="senderEmail" placeholder="e.g., security@paypal.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="senderName">Sender Display Name</label>
+                    <input type="text" id="senderName" placeholder="e.g., PayPal Security Team">
+                </div>
+
+                <div class="form-group">
+                    <label for="subject">Email Subject *</label>
+                    <input type="text" id="subject" placeholder="e.g., Verify your account" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="body">Email Body *</label>
+                    <textarea id="body" placeholder="Paste the email content here..." required></textarea>
+                </div>
+
+                <button type="submit" class="btn">🔍 Analyze Email</button>
+            </form>
+
+            <div id="results" class="results">
+                <div class="threat-badge" id="threatBadge"></div>
+                <div class="score" id="score"></div>
+                <div class="reasons" id="reasonsSection">
+                    <h3>⚠️ Suspicious Indicators:</h3>
+                    <div id="reasonsList"></div>
+                </div>
+                <div class="recommendation" id="recommendation"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SuspiciousEmailDetector {
+            constructor() {
+                this.suspiciousKeywords = [
+                    'urgent', 'verify your account', 'suspended', 'confirm your identity',
+                    'click here immediately', 'your account will be closed', 'unusual activity',
+                    'security alert', 'update your information', 'prize', 'winner',
+                    'congratulations', 'claim your', 'act now', 'limited time',
+                    'password reset', 'confirm your password', 'social security number',
+                    'bank account', 'credit card', 'routing number', 'wire transfer',
+                    'nigerian prince', 'inheritance', 'lottery', 'tax refund'
+                ];
+                
+                this.suspiciousDomains = [
+                    '.tk', '.ml', '.ga', '.cf', '.gq', '.xyz', 'bit.ly', 'tinyurl.com'
+                ];
+                
+                this.commonlySpoofed = [
+                    'paypal', 'amazon', 'microsoft', 'apple', 'google', 'facebook',
+                    'netflix', 'bank', 'irs', 'fedex', 'ups', 'dhl'
+                ];
+            }
+
+            checkSender(senderEmail, senderName = '') {
+                let score = 0;
+                const reasons = [];
+                
+                if (senderName) {
+                    for (const brand of this.commonlySpoofed) {
+                        if (senderName.toLowerCase().includes(brand) && !senderEmail.toLowerCase().includes(brand)) {
+                            score += 30;
+                            reasons.push(`Display name mentions '${brand}' but email doesn't match`);
+                        }
+                    }
+                }
+                
+                for (const domain of this.suspiciousDomains) {
+                    if (senderEmail.toLowerCase().includes(domain)) {
+                        score += 25;
+                        reasons.push(`Suspicious domain detected: ${domain}`);
+                    }
+                }
+                
+                if (/\@.*\d+.*\./.test(senderEmail)) {
+                    score += 15;
+                    reasons.push("Numbers in domain name (unusual for legitimate companies)");
+                }
+                
+                const emailDomain = senderEmail.includes('@') ? senderEmail.split('@')[1] : '';
+                if ((emailDomain.match(/\./g) || []).length > 2) {
+                    score += 10;
+                    reasons.push("Multiple subdomains detected");
+                }
+                
+                return { score, reasons };
+            }
+
+            checkContent(subject, body) {
+                let score = 0;
+                const reasons = [];
+                const fullText = (subject + ' ' + body).toLowerCase();
+                
+                const foundKeywords = this.suspiciousKeywords.filter(kw => fullText.includes(kw));
+                if (foundKeywords.length > 0) {
+                    score += foundKeywords.length * 10;
+                    reasons.push(`Suspicious keywords found: ${foundKeywords.slice(0, 3).join(', ')}`);
+                }
+                
+                const urgencyWords = ['urgent', 'immediately', 'now', 'act fast', 'expires'];
+                const urgencyCount = urgencyWords.filter(word => fullText.includes(word)).length;
+                if (urgencyCount >= 2) {
+                    score += 20;
+                    reasons.push("Excessive urgency detected");
+                }
+                
+                const sensitiveInfo = ['password', 'social security', 'ssn', 'credit card', 'bank account'];
+                if (sensitiveInfo.some(info => fullText.includes(info))) {
+                    score += 30;
+                    reasons.push("Requests sensitive information");
+                }
+                
+                if (/[.!?]{2,}/.test(body)) {
+                    score += 10;
+                    reasons.push("Multiple punctuation marks (poor grammar)");
+                }
+                
+                if (subject && subject === subject.toUpperCase() && subject.length > 10) {
+                    score += 15;
+                    reasons.push("Subject line in ALL CAPS");
+                }
+                
+                return { score, reasons };
+            }
+
+            checkLinks(body) {
+                let score = 0;
+                const reasons = [];
+                
+                const urls = body.match(/https?:\/\/(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+/g) || [];
+                
+                if (urls.length > 0) {
+                    const ipUrls = urls.filter(url => /https?:\/\/\d+\.\d+\.\d+\.\d+/.test(url));
+                    if (ipUrls.length > 0) {
+                        score += 30;
+                        reasons.push("Links to IP addresses instead of domain names");
+                    }
+                    
+                    if (urls.some(url => ['bit.ly', 'tinyurl', 'goo.gl'].some(domain => url.includes(domain)))) {
+                        score += 20;
+                        reasons.push("URL shorteners detected (can hide destination)");
+                    }
+                }
+                
+                return { score, reasons };
+            }
+
+            analyzeEmail(senderEmail, subject, body, senderName = '') {
+                let totalScore = 0;
+                const allReasons = [];
+                
+                const senderCheck = this.checkSender(senderEmail, senderName);
+                totalScore += senderCheck.score;
+                allReasons.push(...senderCheck.reasons);
+                
+                const contentCheck = this.checkContent(subject, body);
+                totalScore += contentCheck.score;
+                allReasons.push(...contentCheck.reasons);
+                
+                const linkCheck = this.checkLinks(body);
+                totalScore += linkCheck.score;
+                allReasons.push(...linkCheck.reasons);
+                
+                let threatLevel, riskClass;
+                if (totalScore >= 70) {
+                    threatLevel = "HIGH RISK";
+                    riskClass = "high-risk";
+                } else if (totalScore >= 40) {
+                    threatLevel = "MODERATE RISK";
+                    riskClass = "moderate-risk";
+                } else if (totalScore >= 20) {
+                    threatLevel = "LOW RISK";
+                    riskClass = "low-risk";
+                } else {
+                    threatLevel = "LIKELY SAFE";
+                    riskClass = "safe";
+                }
+                
+                const recommendations = {
+                    'HIGH RISK': "⛔ Do NOT click any links or provide any information. Delete this email immediately.",
+                    'MODERATE RISK': "⚠️ Be very cautious. Verify sender through official channels before taking any action.",
+                    'LOW RISK': "ℹ️ Exercise normal caution. Verify authenticity if uncertain.",
+                    'LIKELY SAFE': "✅ Email appears legitimate, but always stay vigilant."
+                };
+                
+                return {
+                    score: totalScore,
+                    threatLevel,
+                    riskClass,
+                    reasons: allReasons,
+                    recommendation: recommendations[threatLevel]
+                };
+            }
+        }
+
+        const detector = new SuspiciousEmailDetector();
+        const form = document.getElementById('emailForm');
+        const resultsDiv = document.getElementById('results');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const senderEmail = document.getElementById('senderEmail').value;
+            const senderName = document.getElementById('senderName').value;
+            const subject = document.getElementById('subject').value;
+            const body = document.getElementById('body').value;
+            
+            const result = detector.analyzeEmail(senderEmail, subject, body, senderName);
+            
+            resultsDiv.className = `results ${result.riskClass} show`;
+            document.getElementById('threatBadge').textContent = result.threatLevel;
+            document.getElementById('score').textContent = `Score: ${result.score}`;
+            
+            const reasonsList = document.getElementById('reasonsList');
+            if (result.reasons.length > 0) {
+                reasonsList.innerHTML = result.reasons.map(reason => 
+                    `<div class="reason-item">• ${reason}</div>`
+                ).join('');
+            } else {
+                reasonsList.innerHTML = '<div class="reason-item">✅ No suspicious indicators found</div>';
+            }
+            
+            document.getElementById('recommendation').innerHTML = `<span class="icon">💡</span>${result.recommendation}`;
+            
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+    </script>
+</body>
+</html>
